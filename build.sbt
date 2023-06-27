@@ -13,5 +13,13 @@ lazy val root = project
     fork := true
   )
 
+lazy val docs = project
+  .in(file(".site-docs"))
+  .dependsOn(root)
+  .settings(
+    mdocOut := file("./website/docs")
+  )
+  .enablePlugins(MdocPlugin)
+
 addCommandAlias("fmt", "all root/scalafmtSbt root/scalafmtAll")
 addCommandAlias("fmtCheck", "all root/scalafmtSbtCheck root/scalafmtCheckAll")
