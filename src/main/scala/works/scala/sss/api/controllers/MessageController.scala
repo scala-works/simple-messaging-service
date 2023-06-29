@@ -1,7 +1,7 @@
 package works.scala.sss.api.controllers
 
 import com.rabbitmq.client.Connection
-import works.scala.sss.api.models.MessageConsumeResponse
+import works.scala.sss.api.models.*
 import works.scala.sss.api.services.ConsumerService
 import works.scala.sss.rmq.RMQ
 import zio.http.ChannelEvent.*
@@ -12,7 +12,8 @@ import zio.Duration.*
 import zio.http.ChannelEvent.UserEvent.HandshakeComplete
 import zio.http.Path.Segment.Root
 import works.scala.sss.extensions.Extensions.*
-
+import zio.http.codec.HttpCodec
+import zio.http.endpoint.*
 import java.util.UUID
 import scala.language.postfixOps
 
@@ -28,34 +29,27 @@ object MessageController:
 case class MessageController(
     consumerService: ConsumerService,
     rmqConnection: Connection
-) extends BaseController {}
+) extends BaseController:
+  import HttpCodec.*
 
-  // private val consumeEndpoint =
-  //   baseEndpoint
-  //     .tag("messages")
-  //     .in("messages")
+  val consumeOne =
+    Endpoint
+      .get("messages" / string("subscritpion"))
+      .out[MessageConsumeResponse]
+      .outError[ApiError](Status.InternalServerError)
+      .implement(sub => consumerService.ackingConsume(sub).handleErrors)
 
-  // val consume =
-  //   consumeEndpoint
-  //     .name("consume")
-  //     .description(
-  //       "Consume and auto-ack a single message from the queue if non-empty"
-  //     )
-  //     .in(path[String]("subscription"))
-  //     .get
-  //     .out(jsonBody[MessageConsumeResponse])
-  //     .serverLogic(in => consumerService.ackingConsume(in).handleErrors)
+// private def socketLogic(subscription: String) = Http
+//   .collectZIO[WebSocketChannelEvent] {
+//     consumerService.handleWs(subscription, UUID.randomUUID().toString)
+//   }
 
-  // private def socketLogic(subscription: String) = Http
-  //   .collectZIO[WebSocketChannelEvent] {
-  //     consumerService.handleWs(subscription, UUID.randomUUID().toString)
-  //   }
+// val socketApp = Http.collectZIO[Request] {
+//   case Method.GET -> !! / "stream" / subscription => // Don't put at "messages" because conflict with tapir
+//     socketLogic(subscription).toSocketApp.toResponse
+// }
 
-  // val socketApp = Http.collectZIO[Request] {
-  //   case Method.GET -> !! / "stream" / subscription => // Don't put at "messages" because conflict with tapir
-  //     socketLogic(subscription).toSocketApp.toResponse
-  // }
-
-  // override val routes: List[ServerEndpoint[Any, Task]] = List(
-  //   consume
-  // )
+  override val routes: List[Routes[Any, ApiError, EndpointMiddleware.None]] =
+    List(
+      consumeOne
+    )
