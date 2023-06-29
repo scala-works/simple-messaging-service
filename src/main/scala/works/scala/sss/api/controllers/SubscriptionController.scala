@@ -1,14 +1,11 @@
 package works.scala.sss.api.controllers
 
-import works.scala.sss.api.models.{
-  CreateSubscriptionRequest,
-  CreateSubscriptionResponse,
-  DeleteSubscriptionResponse,
-  GetSubscriptionResponse,
-  GetSubscriptionsResponse
-}
+import works.scala.sss.api.models.*
 import works.scala.sss.api.services.SubscriptionService
 import zio.*
+import zio.http.*
+import zio.http.codec.HttpCodec
+import zio.http.endpoint.*
 
 object SubscriptionController:
   val layer: ZLayer[SubscriptionService, Nothing, SubscriptionController] =
@@ -17,52 +14,44 @@ object SubscriptionController:
     }
 
 case class SubscriptionController(subscriptionService: SubscriptionService)
-    extends BaseController {}
+    extends BaseController:
+  import HttpCodec._
 
-//   private val subEndpoint =
-//     baseEndpoint
-//       .tag("subscriptions")
-//       .in("subscriptions")
+  val createSubscription =
+    Endpoint
+      .post("subscriptions")
+      .in[CreateSubscriptionRequest]
+      .out[CreateSubscriptionResponse]
+      .outError[ApiError](Status.InternalServerError)
+      .implement(in => subscriptionService.createSubscription(in).handleErrors)
 
-//   val createSubscription =
-//     subEndpoint
-//       .name("createSubscription")
-//       .description("Create a new subscription")
-//       .post
-//       .in(jsonBody[CreateSubscriptionRequest])
-//       .out(jsonBody[CreateSubscriptionResponse])
-//       .serverLogic(in =>
-//         subscriptionService.createSubscription(in).handleErrors
-//       )
+  val getSubscription =
+    Endpoint
+      .get("subscriptions" / string("name"))
+      .out[GetSubscriptionResponse]
+      .outError[ApiError](Status.InternalServerError)
+      .implement(name => subscriptionService.getSubscription(name).handleErrors)
 
-//   val getSubscription =
-//     subEndpoint
-//       .name("getSubscription")
-//       .description("Get information about a subscription")
-//       .in(path[String]("id"))
-//       .out(jsonBody[GetSubscriptionResponse])
-//       .serverLogic(id => subscriptionService.getSubscription(id).handleErrors)
+  val getSubscriptions =
+    Endpoint
+      .get("subscriptions")
+      .out[GetSubscriptionsResponse]
+      .outError[ApiError](Status.InternalServerError)
+      .implement(name => subscriptionService.getSubscriptions().handleErrors)
 
-//   val getSubscriptions =
-//     subEndpoint
-//       .name("getSubscriptions")
-//       .description("Get all subscriptions")
-//       .out(jsonBody[GetSubscriptionsResponse])
-//       .serverLogic(_ => subscriptionService.getSubscriptions().handleErrors)
+  val deleteSubscription =
+    Endpoint
+      .delete("subscriptions" / string("name"))
+      .out[DeleteSubscriptionResponse]
+      .outError[ApiError](Status.InternalServerError)
+      .implement(name =>
+        subscriptionService.deleteSubscription(name).handleErrors
+      )
 
-//   val deleteSubscription =
-//     subEndpoint
-//       .name("deleteSubscription")
-//       .description("Delete a subscription")
-//       .in(path[String]("name"))
-//       .out(jsonBody[DeleteSubscriptionResponse])
-//       .serverLogic(name =>
-//         subscriptionService.deleteSubscription(name).handleErrors
-//       )
-
-//   override val routes: List[ServerEndpoint[Any, Task]] = List(
-//     createSubscription,
-//     getSubscription,
-//     getSubscriptions,
-//     deleteSubscription
-//   )
+  override val routes: List[Routes[Any, ApiError, EndpointMiddleware.None]] =
+    List(
+      getSubscription,
+      getSubscriptions,
+      createSubscription,
+      deleteSubscription
+    )
