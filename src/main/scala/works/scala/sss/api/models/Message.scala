@@ -1,7 +1,8 @@
 package works.scala.sss.api.models
 
-import sttp.tapir.Schema
 import zio.json.JsonCodec
+import zio.schema.Schema
+import zio.schema.derived
 
 case class Message(
     dTag: Long,

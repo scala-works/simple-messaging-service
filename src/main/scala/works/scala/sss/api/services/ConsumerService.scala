@@ -14,7 +14,6 @@ import com.rabbitmq.http.client.Client
 import works.scala.sss.extensions.Extensions.*
 import works.scala.sss.rmq.RMQ
 import works.scala.sss.api.models.{Message, MessageConsumeResponse}
-import zio.http.socket.{WebSocketChannelEvent, WebSocketFrame}
 import zio.*
 import zio.http.*
 import works.scala.sss.extensions.Extensions.*
@@ -115,17 +114,18 @@ case class ConsumerServiceImpl(
       subscription: String,
       wsId: String
   ): PartialFunction[WebSocketChannelEvent, RIO[Any, Unit]] = {
-    { case ChannelEvent(ws, event) =>
-      event match
-        case UserEventTriggered(HandshakeComplete) =>
-          for {
-            channel <- makeEntry(wsId, rmqConnection)
-            _       <- consumerStream(channel, subscription)
-                         .tap(msg => ws.writeAndFlush(WebSocketFrame.text(msg)))
-                         .runDrain
-            _       <- ZIO.never
-          } yield ()
-        case ChannelUnregistered                   => closeEntry(wsId).unit
-        case _                                     => ZIO.unit
-    }
+    // { case ChannelEvent(ws, event) =>
+    //   event match
+    //     case UserEventTriggered(HandshakeComplete) =>
+    //       for {
+    //         channel <- makeEntry(wsId, rmqConnection)
+    //         _       <- consumerStream(channel, subscription)
+    //                      .tap(msg => ws.writeAndFlush(WebSocketFrame.text(msg)))
+    //                      .runDrain
+    //         _       <- ZIO.never
+    //       } yield ()
+    //     case ChannelUnregistered                   => closeEntry(wsId).unit
+    //     case _                                     => ZIO.unit
+    // }
+    ???
   }

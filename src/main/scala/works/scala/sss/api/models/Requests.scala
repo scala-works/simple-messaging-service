@@ -1,8 +1,8 @@
 package works.scala.sss.api.models
 
 import zio.json.*
-import sttp.tapir.Schema
-
+import zio.schema.Schema
+import zio.schema.derived
 import java.time.Instant
 
 case class GetTopicRequest() derives JsonCodec, Schema

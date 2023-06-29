@@ -35,7 +35,7 @@ case class TopicServiceImpl(rmqConnection: Connection, rmqClient: Client)
       .asScala
       .iterator
       .map(i => Topic(i.getName))
-      .toSeq
+      .toList
 
     GetTopicsResponse(exchanges)
   }
