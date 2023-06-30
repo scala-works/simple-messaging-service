@@ -10,7 +10,6 @@ import zio.stream.*
 import zio.*
 import zio.Duration.*
 import zio.http.ChannelEvent.UserEvent.HandshakeComplete
-import zio.http.Path.Segment.Root
 import works.scala.sss.extensions.Extensions.*
 import zio.http.codec.HttpCodec
 import zio.http.endpoint.*
@@ -39,15 +38,10 @@ case class MessageController(
       .outError[ApiError](Status.InternalServerError)
       .implement(sub => consumerService.ackingConsume(sub).handleErrors)
 
-// private def socketLogic(subscription: String) = Http
-//   .collectZIO[WebSocketChannelEvent] {
-//     consumerService.handleWs(subscription, UUID.randomUUID().toString)
-//   }
-
-// val socketApp = Http.collectZIO[Request] {
-//   case Method.GET -> !! / "stream" / subscription => // Don't put at "messages" because conflict with tapir
-//     socketLogic(subscription).toSocketApp.toResponse
-// }
+  val socketApp = Http.collectZIO[Request] {
+    case Method.GET -> Root / "messages" / subscription =>
+      consumerService.handleWs(subscription).toResponse
+  }
 
   override val routes: List[Routes[Any, ApiError, EndpointMiddleware.None]] =
     List(

@@ -28,7 +28,7 @@ object Main extends ZIOAppDefault:
     msg    <- ZIO.service[MessageController]
     _      <- ZIO.logInfo("Server started: http://localhost:9000/docs")
     _      <- Server.install(
-                routes.reduce(_ ++ _).toApp // TODO not use reduce
+                routes.reduce(_ ++ _).toApp ++ msg.socketApp
               )
     _      <- ZIO.never
   } yield ExitCode.success

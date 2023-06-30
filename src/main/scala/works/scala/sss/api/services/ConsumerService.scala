@@ -28,9 +28,8 @@ import scala.util.Try
 trait ConsumerService:
   def ackingConsume(subscription: String): Task[MessageConsumeResponse]
   def handleWs(
-      subscription: String,
-      wsId: String
-  ): PartialFunction[WebSocketChannelEvent, RIO[Any, Unit]]
+      subscription: String
+  ): Handler[Any, Throwable, WebSocketChannel, Unit]
 
 object ConsumerServiceImpl:
   val layer: ZLayer[
@@ -42,54 +41,13 @@ object ConsumerServiceImpl:
       for {
         amqp <- ZIO.service[Connection]
         http <- ZIO.service[Client]
-        ref  <- Ref.make[Map[String, Channel]](Map.empty)
-      } yield ConsumerServiceImpl(amqp, http, ref)
+      } yield ConsumerServiceImpl(amqp, http)
     }
 
 case class ConsumerServiceImpl(
     rmqConnection: Connection,
-    rmqClient: Client,
-    refMap: Ref[Map[String, Channel]]
+    rmqClient: Client
 ) extends ConsumerService:
-
-  private def makeEntry(id: String, connection: Connection): Task[Channel] =
-    for {
-      channel <- ZIO.attempt(connection.createChannel())
-      _       <- ZIO.attempt(channel.basicQos(1))
-      _       <- refMap.getAndUpdate(_ + (id -> channel))
-      _       <- ZIO.logInfo(s"Created channel $id")
-    } yield channel
-
-  private def closeEntry(id: String): ZIO[Any, Nothing, Unit] = for {
-    map <- refMap.getAndUpdate(_ - id)
-    _   <-
-      ZIO
-        .fromOption(map.get(id))
-        .tap(c => ZIO.attempt(c.close()))
-        .ignore
-    _   <- ZIO.logInfo(s"Closed channel $id")
-  } yield ()
-
-  override def ackingConsume(
-      subscription: String
-  ): Task[MessageConsumeResponse] =
-    ZIO
-      .scoped {
-        rmqConnection.scopedOp { chann =>
-          val response =
-            Try(Option(chann.basicGet(subscription, true))).toOption.flatten
-          MessageConsumeResponse(
-            msgCount = response.map(_.getMessageCount).getOrElse(0),
-            message = response.map { r =>
-              Message(
-                dTag = r.getEnvelope.getDeliveryTag,
-                payload = new String(r.getBody)
-              )
-            }
-          )
-        }
-      }
-      .logError("ackingConsume")
 
   private def consumerStream(
       channel: Channel,
@@ -111,21 +69,50 @@ case class ConsumerServiceImpl(
   }
 
   override def handleWs(
-      subscription: String,
-      wsId: String
-  ): PartialFunction[WebSocketChannelEvent, RIO[Any, Unit]] = {
-    // { case ChannelEvent(ws, event) =>
-    //   event match
-    //     case UserEventTriggered(HandshakeComplete) =>
-    //       for {
-    //         channel <- makeEntry(wsId, rmqConnection)
-    //         _       <- consumerStream(channel, subscription)
-    //                      .tap(msg => ws.writeAndFlush(WebSocketFrame.text(msg)))
-    //                      .runDrain
-    //         _       <- ZIO.never
-    //       } yield ()
-    //     case ChannelUnregistered                   => closeEntry(wsId).unit
-    //     case _                                     => ZIO.unit
-    // }
-    ???
-  }
+      subscription: String
+  ): Handler[Any, Throwable, WebSocketChannel, Unit] =
+    Handler.webSocket { ws =>
+      ZIO
+        .scoped {
+          for {
+            connection <- RMQ.connection
+            channel    <- ZIO.attempt(connection.createChannel())
+            _          <- ws.receiveAll {
+                            case UserEventTriggered(HandshakeComplete) =>
+                              consumerStream(channel, subscription)
+                                .tap(msg => ws.send(Read(WebSocketFrame.Text(msg))))
+                                .runDrain
+                            case Read(WebSocketFrame.Text(msg))        => ZIO.unit
+                            case Unregistered                          => ZIO.interrupt
+                            case _                                     => ZIO.unit
+                          }
+            _          <- ZIO.unit
+          } yield ()
+        }
+        .provide(
+          ZLayer(RMQ.client),
+          ZLayer(RMQ.connectionFactory),
+          RMQ.Config("localhost", 5672, "guest", "guest").ulayer
+        )
+    }
+
+  override def ackingConsume(
+      subscription: String
+  ): Task[MessageConsumeResponse] =
+    ZIO
+      .scoped {
+        rmqConnection.scopedOp { chann =>
+          val response =
+            Try(Option(chann.basicGet(subscription, true))).toOption.flatten
+          MessageConsumeResponse(
+            msgCount = response.map(_.getMessageCount).getOrElse(0),
+            message = response.map { r =>
+              Message(
+                dTag = r.getEnvelope.getDeliveryTag,
+                payload = new String(r.getBody)
+              )
+            }
+          )
+        }
+      }
+      .logError("ackingConsume")
