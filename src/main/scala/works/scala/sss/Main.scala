@@ -1,7 +1,6 @@
 import zio.*
 import works.scala.sss.api.controllers.*
 import caliban.parsing.adt.OperationType.Subscription
-import sttp.tapir.swagger.bundle.SwaggerInterpreter
 import zio.http.*
 import sttp.tapir.server.ziohttp.ZioHttpInterpreter
 import works.scala.sss.api.services.*
@@ -18,12 +17,7 @@ object Main extends ZIOAppDefault:
   } yield {
     val combined = List(topics, subscriptions, publishing, messages)
       .flatMap(_.routes)
-    val doc      = SwaggerInterpreter().fromServerEndpoints(
-      combined,
-      "Simple Scheduling Service",
-      "1"
-    )
-    combined ++ doc
+    combined
   }
 
   val program = for {
@@ -34,9 +28,7 @@ object Main extends ZIOAppDefault:
     msg    <- ZIO.service[MessageController]
     _      <- ZIO.logInfo("Server started: http://localhost:9000/docs")
     _      <- Server.install(
-                ZioHttpInterpreter()
-                  .toHttp(routes)
-                  .withDefaultErrorResponse ++ msg.socketApp
+                routes.reduce(_ ++ _).toApp ++ msg.socketApp
               )
     _      <- ZIO.never
   } yield ExitCode.success

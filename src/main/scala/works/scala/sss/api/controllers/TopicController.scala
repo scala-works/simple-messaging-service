@@ -1,16 +1,11 @@
 package works.scala.sss.api.controllers
 
-import caliban.*
-import caliban.schema.Schema.auto.*
-import caliban.schema.ArgBuilder.auto.*
-import caliban.schema.Annotations.GQLDescription
-import sttp.tapir.*
-import sttp.tapir.json.zio.jsonBody
-import sttp.tapir.server.ServerEndpoint
-import sttp.tapir.server.ServerEndpoint.Full
 import works.scala.sss.api.models.*
 import works.scala.sss.api.services.TopicService
 import zio.*
+import zio.http.*
+import zio.http.codec.HttpCodec
+import zio.http.endpoint.*
 
 object TopicController:
   val layer: ZLayer[TopicService, Nothing, TopicController] = ZLayer {
@@ -18,79 +13,41 @@ object TopicController:
   }
 
 case class TopicController(topicService: TopicService) extends BaseController:
+  import HttpCodec._
 
-  private val topicsEndpoint: Endpoint[Unit, Unit, ApiError, Unit, Any] =
-    baseEndpoint
-      .tag("topics")
-      .in("topics")
+  val getTopics: Routes[Any, ApiError, EndpointMiddleware.None] =
+    Endpoint
+      .get("topics")
+      .out[GetTopicsResponse]
+      .outError[ApiError](Status.InternalServerError)
+      .implement(_ => topicService.getTopics.handleErrors)
 
-  val getTopics
-      : Full[Unit, Unit, Unit, ApiError, GetTopicsResponse, Any, Task] =
-    topicsEndpoint
-      .name("getTopics")
-      .description("Get all topics")
-      .get
-      .out(jsonBody[GetTopicsResponse])
-      .serverLogic(_ => topicService.getTopics.handleErrors)
+  val getTopic =
+    Endpoint
+      .get("topics" / string("name"))
+      .out[GetTopicResponse]
+      .outError[ApiError](Status.InternalServerError)
+      .implement(name => topicService.getTopic(name).handleErrors)
 
-  val getTopic
-      : Full[Unit, Unit, String, ApiError, GetTopicResponse, Any, Task] =
-    topicsEndpoint
-      .name("getTopic")
-      .description("Get a topic by ID")
-      .get
-      .in(path[String]("id"))
-      .out(jsonBody[GetTopicResponse])
-      .serverLogic(id => topicService.getTopic(id).handleErrors)
+  val createTopic =
+    Endpoint
+      .post("topics")
+      .in[CreateTopicRequest]
+      .out[CreateTopicResponse]
+      .outError[ApiError](Status.InternalServerError)
+      .implement(in => topicService.createTopic(in).handleErrors)
 
-  val createTopic: Full[
-    Unit,
-    Unit,
-    CreateTopicRequest,
-    ApiError,
-    CreateTopicResponse,
-    Any,
-    Task
-  ] =
-    topicsEndpoint
-      .name("createTopic")
-      .description("Create a new topic")
-      .post
-      .in(jsonBody[CreateTopicRequest])
-      .out(jsonBody[CreateTopicResponse])
-      .serverLogic(in => topicService.createTopic(in).handleErrors)
+  val deleteTopic =
+    Endpoint
+      .delete("topics" / string("name"))
+      .out[DeleteTopicResponse]
+      .outError[ApiError](Status.InternalServerError)
+      .implement(name => topicService.deleteTopic(name).handleErrors)
 
-  val updateTopic: Full[
-    Unit,
-    Unit,
-    (String, UpdateTopicRequest),
-    ApiError,
-    UpdateTopicResponse,
-    Any,
-    Task
-  ] =
-    topicsEndpoint
-      .name("updateTopic")
-      .description("Update an existing topic")
-      .put
-      .in(path[String] / jsonBody[UpdateTopicRequest])
-      .out(jsonBody[UpdateTopicResponse])
-      .serverLogic((id, in) => topicService.updateTopic(id, in).handleErrors)
-
-  val deleteTopic
-      : Full[Unit, Unit, String, ApiError, DeleteTopicResponse, Any, Task] =
-    topicsEndpoint
-      .name("deleteTopic")
-      .description("Delete an existing topic")
-      .delete
-      .in(path[String])
-      .out(jsonBody[DeleteTopicResponse])
-      .serverLogic(id => topicService.deleteTopic(id).handleErrors)
-
-  override val routes: List[ServerEndpoint[Any, Task]] = List(
-    getTopic,
-    getTopics,
-    createTopic,
-    updateTopic,
-    deleteTopic
-  )
+  override val routes: List[Routes[Any, ApiError, EndpointMiddleware.None]] =
+    List(
+      getTopics,
+      getTopic,
+      createTopic,
+      deleteTopic
+    )

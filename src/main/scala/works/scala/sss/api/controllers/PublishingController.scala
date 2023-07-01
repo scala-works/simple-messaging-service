@@ -1,14 +1,11 @@
 package works.scala.sss.api.controllers
 
-import sttp.tapir.*
-import sttp.tapir.json.zio.jsonBody
-import works.scala.sss.api.models.{
-  PublishMessageRequest,
-  PublishMessageResponse
-}
+import works.scala.sss.api.models.*
 import works.scala.sss.api.services.PublishingService
 import zio.*
-import sttp.tapir.server.ServerEndpoint
+import zio.http.*
+import zio.http.codec.HttpCodec
+import zio.http.endpoint.*
 
 object PublishingController:
   val layer: ZLayer[PublishingService, Nothing, PublishingController] = ZLayer {
@@ -17,24 +14,19 @@ object PublishingController:
 
 case class PublishingController(publishingService: PublishingService)
     extends BaseController:
-
-  private val publishEndpoint =
-    baseEndpoint
-      .in("publish")
-      .tag("publish")
+  import HttpCodec.*
 
   val publishMessage =
-    publishEndpoint
-      .name("publishMessage")
-      .description("Publish a message to a topic")
-      .post
-      .in(path[String]("topic"))
-      .in(jsonBody[PublishMessageRequest])
-      .out(jsonBody[PublishMessageResponse])
-      .serverLogic(in =>
-        publishingService.publishMessage(in._1, in._2).handleErrors
+    Endpoint
+      .post("publish" / string("topic"))
+      .in[PublishMessageRequest]
+      .out[PublishMessageResponse]
+      .outError[ApiError](Status.InternalServerError)
+      .implement((topic, in) =>
+        publishingService.publishMessage(topic, in).handleErrors
       )
 
-  override val routes: List[ServerEndpoint[Any, Task]] = List(
-    publishMessage
-  )
+  override val routes: List[Routes[Any, ApiError, EndpointMiddleware.None]] =
+    List(
+      publishMessage
+    )

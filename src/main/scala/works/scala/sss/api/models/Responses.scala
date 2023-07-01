@@ -1,12 +1,13 @@
 package works.scala.sss.api.models
 
 import zio.json.JsonCodec
-import sttp.tapir.Schema
+import zio.schema.Schema
+import zio.schema.derived
 
 case class ApiError(message: String) derives JsonCodec, Schema
 
 case class GetTopicResponse(topic: Topic) derives JsonCodec, Schema
-case class GetTopicsResponse(topics: Seq[Topic]) derives JsonCodec, Schema
+case class GetTopicsResponse(topics: List[Topic]) derives JsonCodec, Schema
 case class CreateTopicResponse(topic: Topic) derives JsonCodec, Schema
 case class UpdateTopicResponse(topic: Topic) derives JsonCodec, Schema
 case class DeleteTopicResponse(topic: Topic) derives JsonCodec, Schema
