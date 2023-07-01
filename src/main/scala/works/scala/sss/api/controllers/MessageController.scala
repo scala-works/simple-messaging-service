@@ -39,7 +39,7 @@ case class MessageController(
       .implement(sub => consumerService.ackingConsume(sub).handleErrors)
 
   val socketApp = Http.collectZIO[Request] {
-    case Method.GET -> Root / "messages" / subscription =>
+    case Method.GET -> Root / "stream" / subscription =>
       consumerService.handleWs(subscription).toResponse
   }
 

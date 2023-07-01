@@ -24,6 +24,7 @@ import zio.stream.*
 import java.io.{PipedInputStream, PipedOutputStream}
 import java.util.UUID
 import scala.util.Try
+import zio.http.WebSocketFrame.Close
 
 trait ConsumerService:
   def ackingConsume(subscription: String): Task[MessageConsumeResponse]
@@ -82,8 +83,10 @@ case class ConsumerServiceImpl(
                               consumerStream(channel, subscription)
                                 .tap(msg => ws.send(Read(WebSocketFrame.Text(msg))))
                                 .runDrain
+                                .fork
                             case Read(WebSocketFrame.Text(msg))        => ZIO.unit
                             case Unregistered                          => ZIO.interrupt
+                            case Read(Close(_, _))                     => ZIO.interrupt
                             case _                                     => ZIO.unit
                           }
             _          <- ZIO.unit
