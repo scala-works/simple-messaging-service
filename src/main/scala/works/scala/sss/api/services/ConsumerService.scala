@@ -13,13 +13,15 @@ import com.rabbitmq.client.{
 import com.rabbitmq.http.client.Client
 import works.scala.sss.extensions.Extensions.*
 import works.scala.sss.rmq.RMQ
-import works.scala.sss.api.models.{Message, MessageConsumeResponse}
+import works.scala.sss.api.models.*
+import works.scala.sss.api.models.MessageConfirm.*
 import zio.*
 import zio.http.*
 import works.scala.sss.extensions.Extensions.*
 import zio.http.ChannelEvent.UserEvent.*
 import zio.http.ChannelEvent.*
 import zio.stream.*
+import zio.json.*
 
 import java.io.{PipedInputStream, PipedOutputStream}
 import java.util.UUID
@@ -66,7 +68,7 @@ case class ConsumerServiceImpl(
             Chunk(new String(body)).uio
           )
       }
-      channel.basicConsume(subscription, true, consumer)
+      channel.basicConsume(subscription, false, consumer)
   }
 
   override def handleWs(
@@ -78,13 +80,29 @@ case class ConsumerServiceImpl(
           for {
             connection <- RMQ.connection
             channel    <- ZIO.attempt(connection.createChannel())
+            _          <- ZIO.attempt(channel.basicQos(1))
             _          <- ws.receiveAll {
                             case UserEventTriggered(HandshakeComplete) =>
                               consumerStream(channel, subscription)
                                 .tap(msg => ws.send(Read(WebSocketFrame.Text(msg))))
                                 .runDrain
                                 .fork
-                            case Read(WebSocketFrame.Text(msg))        => ZIO.unit
+                            case Read(WebSocketFrame.Text(msg))        =>
+                              ZIO
+                                .fromEither(msg.fromJson[MessageResponse])
+                                .flatMap { msg =>
+                                  ZIO.whenCase(msg.confirm) {
+                                    case MessageConfirm.Ack             =>
+                                      ZIO.attempt(channel.basicAck(msg.dTag, false))
+                                    case MessageConfirm.Nack(requeue)   =>
+                                      ZIO.attempt(
+                                        channel.basicNack(msg.dTag, false, requeue)
+                                      )
+                                    case MessageConfirm.Reject(requeue) =>
+                                      ZIO.attempt(channel.basicReject(msg.dTag, requeue))
+                                  }
+                                }
+                                .ignore
                             case Unregistered                          => ZIO.interrupt
                             case Read(Close(_, _))                     => ZIO.interrupt
                             case _                                     => ZIO.unit
