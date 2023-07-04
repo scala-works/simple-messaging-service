@@ -13,13 +13,15 @@ import com.rabbitmq.client.{
 import com.rabbitmq.http.client.Client
 import works.scala.sss.extensions.Extensions.*
 import works.scala.sss.rmq.RMQ
-import works.scala.sss.api.models.{Message, MessageConsumeResponse}
+import works.scala.sss.api.models.*
+import works.scala.sss.api.models.MessageConfirm.*
 import zio.*
 import zio.http.*
 import works.scala.sss.extensions.Extensions.*
 import zio.http.ChannelEvent.UserEvent.*
 import zio.http.ChannelEvent.*
 import zio.stream.*
+import zio.json.*
 
 import java.io.{PipedInputStream, PipedOutputStream}
 import java.util.UUID
@@ -29,7 +31,9 @@ import zio.http.WebSocketFrame.Close
 trait ConsumerService:
   def ackingConsume(subscription: String): Task[MessageConsumeResponse]
   def handleWs(
-      subscription: String
+      subscription: String,
+      preFetch: Int,
+      autoAck: Boolean
   ): Handler[Any, Throwable, WebSocketChannel, Unit]
 
 object ConsumerServiceImpl:
@@ -52,7 +56,8 @@ case class ConsumerServiceImpl(
 
   private def consumerStream(
       channel: Channel,
-      subscription: String
+      subscription: String,
+      autoAck: Boolean
   ): ZStream[Any, Throwable, String] = ZStream.async[Any, Throwable, String] {
     cb =>
       val consumer = new DefaultConsumer(channel) {
@@ -66,11 +71,13 @@ case class ConsumerServiceImpl(
             Chunk(new String(body)).uio
           )
       }
-      channel.basicConsume(subscription, true, consumer)
+      channel.basicConsume(subscription, autoAck, consumer)
   }
 
   override def handleWs(
-      subscription: String
+      subscription: String,
+      preFetch: Int,
+      autoAck: Boolean
   ): Handler[Any, Throwable, WebSocketChannel, Unit] =
     Handler.webSocket { ws =>
       ZIO
@@ -78,13 +85,30 @@ case class ConsumerServiceImpl(
           for {
             connection <- RMQ.connection
             channel    <- ZIO.attempt(connection.createChannel())
+            _          <- ZIO.attempt(channel.basicQos(preFetch))
             _          <- ws.receiveAll {
                             case UserEventTriggered(HandshakeComplete) =>
-                              consumerStream(channel, subscription)
+                              consumerStream(channel, subscription, autoAck)
                                 .tap(msg => ws.send(Read(WebSocketFrame.Text(msg))))
                                 .runDrain
                                 .fork
-                            case Read(WebSocketFrame.Text(msg))        => ZIO.unit
+                            case Read(WebSocketFrame.Text(msg))        =>
+                              ZIO
+                                .fromEither(msg.fromJson[MessageResponse])
+                                .flatMap { msg =>
+                                  ZIO.whenCase(msg.confirm) {
+                                    case MessageConfirm.Ack             =>
+                                      ZIO.attempt(channel.basicAck(msg.dTag, false))
+                                    case MessageConfirm.Nack(requeue)   =>
+                                      ZIO.attempt(
+                                        channel.basicNack(msg.dTag, false, requeue)
+                                      )
+                                    case MessageConfirm.Reject(requeue) =>
+                                      ZIO.attempt(channel.basicReject(msg.dTag, requeue))
+                                  }
+                                }
+                                .when(!autoAck)
+                                .ignore
                             case Unregistered                          => ZIO.interrupt
                             case Read(Close(_, _))                     => ZIO.interrupt
                             case _                                     => ZIO.unit

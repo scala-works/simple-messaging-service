@@ -16,16 +16,16 @@ import zio.http.endpoint.*
 import java.util.UUID
 import scala.language.postfixOps
 
-object MessageController:
-  val layer: ZLayer[ConsumerService & Connection, Nothing, MessageController] =
+object ConsumerController:
+  val layer: ZLayer[ConsumerService & Connection, Nothing, ConsumerController] =
     ZLayer {
       for {
         svc  <- ZIO.service[ConsumerService]
         conn <- ZIO.service[Connection]
-      } yield MessageController(svc, conn)
+      } yield ConsumerController(svc, conn)
     }
 
-case class MessageController(
+case class ConsumerController(
     consumerService: ConsumerService,
     rmqConnection: Connection
 ) extends BaseController:
@@ -33,14 +33,26 @@ case class MessageController(
 
   val consumeOne =
     Endpoint
-      .get("messages" / string("subscritpion"))
+      .get("messages" / string("subscription"))
       .out[MessageConsumeResponse]
       .outError[ApiError](Status.InternalServerError)
       .implement(sub => consumerService.ackingConsume(sub).handleErrors)
 
   val socketApp = Http.collectZIO[Request] {
-    case Method.GET -> Root / "stream" / subscription =>
-      consumerService.handleWs(subscription).toResponse
+    case req @ Method.GET -> Root / "stream" / subscription =>
+      consumerService
+        .handleWs(
+          subscription,
+          req.url.queryParams
+            .get("preFetch")
+            .map(_.mkString.toInt)
+            .getOrElse(1),
+          req.url.queryParams
+            .get("autoAck")
+            .map(_.mkString.toBoolean)
+            .getOrElse(false)
+        )
+        .toResponse
   }
 
   override val routes: List[Routes[Any, ApiError, EndpointMiddleware.None]] =
