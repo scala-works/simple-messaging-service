@@ -31,7 +31,8 @@ import zio.http.WebSocketFrame.Close
 trait ConsumerService:
   def ackingConsume(subscription: String): Task[MessageConsumeResponse]
   def handleWs(
-      subscription: String
+      subscription: String,
+      preFetch: Int
   ): Handler[Any, Throwable, WebSocketChannel, Unit]
 
 object ConsumerServiceImpl:
@@ -72,7 +73,8 @@ case class ConsumerServiceImpl(
   }
 
   override def handleWs(
-      subscription: String
+      subscription: String,
+      preFetch: Int
   ): Handler[Any, Throwable, WebSocketChannel, Unit] =
     Handler.webSocket { ws =>
       ZIO
@@ -80,7 +82,7 @@ case class ConsumerServiceImpl(
           for {
             connection <- RMQ.connection
             channel    <- ZIO.attempt(connection.createChannel())
-            _          <- ZIO.attempt(channel.basicQos(1))
+            _          <- ZIO.attempt(channel.basicQos(preFetch))
             _          <- ws.receiveAll {
                             case UserEventTriggered(HandshakeComplete) =>
                               consumerStream(channel, subscription)

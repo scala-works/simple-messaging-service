@@ -13,7 +13,7 @@ object Main extends ZIOAppDefault:
     topics        <- ZIO.service[TopicController]
     subscriptions <- ZIO.service[SubscriptionController]
     publishing    <- ZIO.service[PublishingController]
-    messages      <- ZIO.service[MessageController]
+    messages      <- ZIO.service[ConsumerController]
   } yield {
     val combined = List(topics, subscriptions, publishing, messages)
       .flatMap(_.routes)
@@ -25,8 +25,8 @@ object Main extends ZIOAppDefault:
     _      <-
       ZIO.serviceWithZIO[DelayService](_.consume).resurrect.ignore.forever.fork
     routes <- makeRoutes
-    msg    <- ZIO.service[MessageController]
-    _      <- ZIO.logInfo("Server started: http://localhost:9000/docs")
+    msg    <- ZIO.service[ConsumerController]
+    _      <- ZIO.logInfo("Server started: http://localhost:9000")
     _      <- Server.install(
                 routes.reduce(_ ++ _).toApp ++ msg.socketApp
               )
@@ -53,5 +53,5 @@ object Main extends ZIOAppDefault:
         InitServiceImpl.layer,
         DelayServiceImpl.layer,
         ConsumerServiceImpl.layer,
-        MessageController.layer
+        ConsumerController.layer
       )
