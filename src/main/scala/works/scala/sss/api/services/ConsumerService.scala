@@ -107,6 +107,7 @@ case class ConsumerServiceImpl(
                                       ZIO.attempt(channel.basicReject(msg.dTag, requeue))
                                   }
                                 }
+                                .when(!autoAck)
                                 .ignore
                             case Unregistered                          => ZIO.interrupt
                             case Read(Close(_, _))                     => ZIO.interrupt
