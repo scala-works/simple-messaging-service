@@ -32,7 +32,8 @@ trait ConsumerService:
   def ackingConsume(subscription: String): Task[MessageConsumeResponse]
   def handleWs(
       subscription: String,
-      preFetch: Int
+      preFetch: Int,
+      autoAck: Boolean
   ): Handler[Any, Throwable, WebSocketChannel, Unit]
 
 object ConsumerServiceImpl:
@@ -55,7 +56,8 @@ case class ConsumerServiceImpl(
 
   private def consumerStream(
       channel: Channel,
-      subscription: String
+      subscription: String,
+      autoAck: Boolean
   ): ZStream[Any, Throwable, String] = ZStream.async[Any, Throwable, String] {
     cb =>
       val consumer = new DefaultConsumer(channel) {
@@ -69,12 +71,13 @@ case class ConsumerServiceImpl(
             Chunk(new String(body)).uio
           )
       }
-      channel.basicConsume(subscription, false, consumer)
+      channel.basicConsume(subscription, autoAck, consumer)
   }
 
   override def handleWs(
       subscription: String,
-      preFetch: Int
+      preFetch: Int,
+      autoAck: Boolean
   ): Handler[Any, Throwable, WebSocketChannel, Unit] =
     Handler.webSocket { ws =>
       ZIO
@@ -85,7 +88,7 @@ case class ConsumerServiceImpl(
             _          <- ZIO.attempt(channel.basicQos(preFetch))
             _          <- ws.receiveAll {
                             case UserEventTriggered(HandshakeComplete) =>
-                              consumerStream(channel, subscription)
+                              consumerStream(channel, subscription, autoAck)
                                 .tap(msg => ws.send(Read(WebSocketFrame.Text(msg))))
                                 .runDrain
                                 .fork

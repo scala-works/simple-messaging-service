@@ -43,7 +43,14 @@ case class ConsumerController(
       consumerService
         .handleWs(
           subscription,
-          req.url.queryParams.get("preFetch").map(_.mkString.toInt).getOrElse(1)
+          req.url.queryParams
+            .get("preFetch")
+            .map(_.mkString.toInt)
+            .getOrElse(1),
+          req.url.queryParams
+            .get("autoAck")
+            .map(_.mkString.toBoolean)
+            .getOrElse(false)
         )
         .toResponse
   }
