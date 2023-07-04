@@ -1,4 +1,4 @@
-package works.scala.sss.api.services
+package works.scala.sms.api.services
 
 import com.rabbitmq.client.{
   AMQP,
@@ -8,12 +8,12 @@ import com.rabbitmq.client.{
   Envelope,
   ShutdownSignalException
 }
-import works.scala.sss.api.models.DelayedMessage
-import works.scala.sss.extensions.Extensions.*
+import works.scala.sms.api.models.DelayedMessage
+import works.scala.sms.extensions.Extensions.*
 import zio.{Scope, Task, ZIO, ZLayer}
 import zio.json.JsonCodec
 import zio.json.ast.Json
-import works.scala.sss.rmq.RMQ
+import works.scala.sms.rmq.RMQ
 import zio.json.EncoderOps
 import zio.json.DecoderOps
 

@@ -1,9 +1,9 @@
-package works.scala.sss.api.services
+package works.scala.sms.api.services
 
 import com.rabbitmq.client.Connection
 import com.rabbitmq.http.client.Client
-import works.scala.sss.rmq.RMQ
-import works.scala.sss.extensions.Extensions.*
+import works.scala.sms.rmq.RMQ
+import works.scala.sms.extensions.Extensions.*
 import zio.*
 
 import java.util

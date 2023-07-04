@@ -1,7 +1,7 @@
-package works.scala.sss.api.controllers
+package works.scala.sms.api.controllers
 
-import works.scala.sss.api.models.*
-import works.scala.sss.api.services.PublishingService
+import works.scala.sms.api.models.*
+import works.scala.sms.api.services.PublishingService
 import zio.*
 import zio.http.*
 import zio.http.codec.HttpCodec
