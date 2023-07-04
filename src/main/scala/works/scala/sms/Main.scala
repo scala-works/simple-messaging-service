@@ -1,11 +1,12 @@
 import zio.*
-import works.scala.sss.api.controllers.*
+import works.scala.sms.api.controllers.*
 import caliban.parsing.adt.OperationType.Subscription
 import zio.http.*
 import sttp.tapir.server.ziohttp.ZioHttpInterpreter
-import works.scala.sss.api.services.*
-import works.scala.sss.rmq.RMQ
-import works.scala.sss.extensions.Extensions.*
+import works.scala.sms.api.services.*
+import works.scala.sms.config.{ConfigLoader, RMQConfig, ServerConfig}
+import works.scala.sms.rmq.RMQ
+import works.scala.sms.extensions.Extensions.*
 
 object Main extends ZIOAppDefault:
 
@@ -26,7 +27,8 @@ object Main extends ZIOAppDefault:
       ZIO.serviceWithZIO[DelayService](_.consume).resurrect.ignore.forever.fork
     routes <- makeRoutes
     msg    <- ZIO.service[ConsumerController]
-    _      <- ZIO.logInfo("Server started: http://localhost:9000")
+    cfg    <- ZIO.service[ServerConfig]
+    _      <- ZIO.logInfo(s"Server started: http://localhost:${cfg.port}")
     _      <- Server.install(
                 routes.reduce(_ ++ _).toApp ++ msg.socketApp
               )
@@ -36,7 +38,10 @@ object Main extends ZIOAppDefault:
   override def run: ZIO[Any & (ZIOAppArgs & Scope), Any, Any] =
     program
       .provide(
-        Server.Config.default.port(9000).ulayer,
+        ConfigLoader.layer[ServerConfig]("works.scala.sms.server"),
+        ZLayer
+          .service[ServerConfig]
+          .flatMap(env => Server.Config.default.port(env.get.port).ulayer),
         Server.live,
         TopicController.layer,
         SubscriptionController.layer,
@@ -49,7 +54,7 @@ object Main extends ZIOAppDefault:
         ZLayer.scoped {
           RMQ.connection
         },
-        RMQ.Config("localhost", 5672, "guest", "guest").ulayer,
+        ConfigLoader.layer[RMQConfig]("works.scala.sms.rmq"),
         InitServiceImpl.layer,
         DelayServiceImpl.layer,
         ConsumerServiceImpl.layer,

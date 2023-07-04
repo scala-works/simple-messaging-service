@@ -1,4 +1,4 @@
-package works.scala.sss.api.services
+package works.scala.sms.api.services
 
 import zio.*
 import com.rabbitmq.client.{
@@ -11,13 +11,14 @@ import com.rabbitmq.client.{
   Envelope
 }
 import com.rabbitmq.http.client.Client
-import works.scala.sss.extensions.Extensions.*
-import works.scala.sss.rmq.RMQ
-import works.scala.sss.api.models.*
-import works.scala.sss.api.models.MessageConfirm.*
+import works.scala.sms.extensions.Extensions.*
+import works.scala.sms.rmq.RMQ
+import works.scala.sms.api.models.*
+import works.scala.sms.api.models.MessageConfirm.*
+import works.scala.sms.config.{ConfigLoader, RMQConfig}
 import zio.*
 import zio.http.*
-import works.scala.sss.extensions.Extensions.*
+import works.scala.sms.extensions.Extensions.*
 import zio.http.ChannelEvent.UserEvent.*
 import zio.http.ChannelEvent.*
 import zio.stream.*
@@ -119,7 +120,7 @@ case class ConsumerServiceImpl(
         .provide(
           ZLayer(RMQ.client),
           ZLayer(RMQ.connectionFactory),
-          RMQ.Config("localhost", 5672, "guest", "guest").ulayer
+          ConfigLoader.layer[RMQConfig]("works.scala.sms.rmq")
         )
     }
 

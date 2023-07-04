@@ -1,9 +1,9 @@
-package works.scala.sss.extensions
+package works.scala.sms.extensions
 
 import com.rabbitmq.client.{AMQP, BasicProperties, Channel, Connection}
 import com.rabbitmq.http.client.Client
-import works.scala.sss.api.models.{DelayedMessage, PublishMessageRequest}
-import works.scala.sss.rmq.RMQ
+import works.scala.sms.api.models.{DelayedMessage, PublishMessageRequest}
+import works.scala.sms.rmq.RMQ
 import zio.json.JsonCodec
 import zio.{Scope, Tag, UIO, ULayer, ZIO, ZLayer}
 import zio.json.EncoderOps

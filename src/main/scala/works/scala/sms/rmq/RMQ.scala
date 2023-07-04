@@ -1,4 +1,4 @@
-package works.scala.sss.rmq
+package works.scala.sms.rmq
 
 import zio.*
 import com.rabbitmq.client.{AMQP, Channel, Connection, ConnectionFactory}
@@ -9,8 +9,9 @@ import com.rabbitmq.http.client.{
   ReactorNettyClient,
   ReactorNettyClientOptions
 }
-import works.scala.sss.api.models.PublishMessageRequest
-import works.scala.sss.extensions.Extensions.*
+import works.scala.sms.api.models.PublishMessageRequest
+import works.scala.sms.config.RMQConfig
+import works.scala.sms.extensions.Extensions.*
 
 import java.time.Instant
 
@@ -24,10 +25,8 @@ object RMQ:
   val sendAtHeader     = "scala-works-send-at"
   val delayTopicHeader = "scala-works-delay-topic"
 
-  case class Config(host: String, port: Int, user: String, password: String)
-
-  val connectionFactory: ZIO[Config, Nothing, ConnectionFactory] = for {
-    config <- ZIO.service[RMQ.Config]
+  val connectionFactory: ZIO[RMQConfig, Nothing, ConnectionFactory] = for {
+    config <- ZIO.service[RMQConfig]
   } yield {
     val cf = new ConnectionFactory()
     cf.setHost(config.host)
@@ -49,12 +48,12 @@ object RMQ:
       } yield factory.newConnection()
     }
 
-  val client: Task[Client] =
-    ZIO.attempt {
+  val client: RIO[RMQConfig, Client] =
+    ZIO.serviceWith[RMQConfig] { cfg =>
       new Client(
         new ClientParameters()
-          .url("http://127.0.0.1:15672/api/")
-          .username("guest")
-          .password("guest")
+          .url(cfg.mgmtUrl)
+          .username(cfg.user)
+          .password(cfg.password)
       )
     }

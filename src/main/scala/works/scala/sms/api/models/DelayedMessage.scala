@@ -1,4 +1,4 @@
-package works.scala.sss.api.models
+package works.scala.sms.api.models
 
 import sttp.tapir.Schema
 import zio.json.JsonCodec

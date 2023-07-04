@@ -1,16 +1,16 @@
-package works.scala.sss.api.controllers
+package works.scala.sms.api.controllers
 
 import com.rabbitmq.client.Connection
-import works.scala.sss.api.models.*
-import works.scala.sss.api.services.ConsumerService
-import works.scala.sss.rmq.RMQ
+import works.scala.sms.api.models.*
+import works.scala.sms.api.services.ConsumerService
+import works.scala.sms.rmq.RMQ
 import zio.http.ChannelEvent.*
 import zio.http.*
 import zio.stream.*
 import zio.*
 import zio.Duration.*
 import zio.http.ChannelEvent.UserEvent.HandshakeComplete
-import works.scala.sss.extensions.Extensions.*
+import works.scala.sms.extensions.Extensions.*
 import zio.http.codec.HttpCodec
 import zio.http.endpoint.*
 import java.util.UUID

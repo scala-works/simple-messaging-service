@@ -1,15 +1,15 @@
-package works.scala.sss.api.services
+package works.scala.sms.api.services
 
 import com.rabbitmq.client.Connection
 import com.rabbitmq.http.client.Client
-import works.scala.sss.api.models.{
+import works.scala.sms.api.models.{
   DelayedMessage,
   PublishMessageRequest,
   PublishMessageResponse
 }
 import zio.*
-import works.scala.sss.rmq.RMQ
-import works.scala.sss.extensions.Extensions.*
+import works.scala.sms.rmq.RMQ
+import works.scala.sms.extensions.Extensions.*
 
 trait PublishingService:
   def publishMessage(

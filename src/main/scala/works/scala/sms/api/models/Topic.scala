@@ -1,4 +1,4 @@
-package works.scala.sss.api.models
+package works.scala.sms.api.models
 
 import zio.schema.Schema
 import zio.schema.derived

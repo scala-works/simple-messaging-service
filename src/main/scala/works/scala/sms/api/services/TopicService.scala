@@ -1,12 +1,12 @@
-package works.scala.sss.api.services
+package works.scala.sms.api.services
 
 import com.rabbitmq.client.Connection
 import com.rabbitmq.http.client.domain.QueryParameters
 import com.rabbitmq.http.client.{Client, ReactorNettyClient}
 import zio.*
-import works.scala.sss.api.models.*
-import works.scala.sss.rmq.RMQ
-import works.scala.sss.extensions.Extensions.*
+import works.scala.sms.api.models.*
+import works.scala.sms.rmq.RMQ
+import works.scala.sms.extensions.Extensions.*
 
 import scala.collection.mutable
 import scala.jdk.CollectionConverters.*
