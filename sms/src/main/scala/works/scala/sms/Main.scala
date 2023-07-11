@@ -1,8 +1,6 @@
 import zio.*
 import works.scala.sms.api.controllers.*
-import caliban.parsing.adt.OperationType.Subscription
 import zio.http.*
-import sttp.tapir.server.ziohttp.ZioHttpInterpreter
 import works.scala.sms.api.services.*
 import works.scala.sms.config.{ConfigLoader, RMQConfig, ServerConfig}
 import works.scala.sms.rmq.RMQ
