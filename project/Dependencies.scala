@@ -20,7 +20,7 @@ object Dependencies {
     "dev.zio"           %% "zio-test-sbt"         % Versions.zio
   )
 
-  val server: Seq[ModuleID] = Seq(
+  val sms: Seq[ModuleID] = Seq(
     "dev.zio"       %% "zio-logging"            % Versions.zioLogging,
     "dev.zio"       %% "zio-logging-slf4j2"     % Versions.zioLogging,
     "dev.zio"       %% "zio-opentelemetry"      % Versions.zioTelemetry,
@@ -29,6 +29,10 @@ object Dependencies {
     "ch.qos.logback" % "logback-classic"        % Versions.logback,
     "com.rabbitmq"   % "amqp-client"            % Versions.rmq,
     "com.rabbitmq"   % "http-client"            % Versions.hop
+  ) ++ common
+
+  val smsTests: Seq[ModuleID] = Seq(
+    "com.dimafeng" %% "testcontainers-scala-rabbitmq" % "0.40.17"
   ) ++ common
 
 }
