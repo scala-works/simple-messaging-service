@@ -7,6 +7,10 @@ ThisBuild / testFrameworks += new TestFramework("zio.test.sbt.ZTestFramework")
 
 lazy val root = project
   .in(file("."))
+  .aggregate(sms)
+
+lazy val sms = project
+  .in(file("sms"))
   .settings(
     name := "simple-messaging-service",
     libraryDependencies ++= Dependencies.server,
@@ -15,7 +19,7 @@ lazy val root = project
 
 lazy val docs = project
   .in(file(".site-docs"))
-  .dependsOn(root)
+  .dependsOn(sms)
   .settings(
     mdocOut := file("./website/docs")
   )
