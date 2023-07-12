@@ -1,7 +1,7 @@
 package works.scala.sms.api.models
 
-import sttp.tapir.Schema
 import zio.json.JsonCodec
+import zio.schema.{Schema, derived}
 
 import java.time.Instant
 

@@ -15,7 +15,7 @@ import works.scala.sms.extensions.Extensions.*
 import works.scala.sms.rmq.RMQ
 import works.scala.sms.api.models.*
 import works.scala.sms.api.models.MessageConfirm.*
-import works.scala.sms.config.{ConfigLoader, RMQConfig}
+import works.scala.sms.config.RMQConfig
 import zio.*
 import zio.http.*
 import works.scala.sms.extensions.Extensions.*
@@ -28,6 +28,7 @@ import java.io.{PipedInputStream, PipedOutputStream}
 import java.util.UUID
 import scala.util.Try
 import zio.http.WebSocketFrame.Close
+import opinions.*
 
 trait ConsumerService:
   def ackingConsume(subscription: String): Task[MessageConsumeResponse]
@@ -120,7 +121,7 @@ case class ConsumerServiceImpl(
         .provide(
           ZLayer(RMQ.client),
           ZLayer(RMQ.connectionFactory),
-          ConfigLoader.layer[RMQConfig]("works.scala.sms.rmq")
+          ConfigLayer[RMQConfig]("works.scala.sms.rmq")
         )
     }
 

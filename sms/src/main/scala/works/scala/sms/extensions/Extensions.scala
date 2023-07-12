@@ -69,7 +69,3 @@ object Extensions:
             delayedMessage.payload.getBytes
           )
       }
-
-  extension [Z: Tag](z: Z)
-    def ulayer: ULayer[Z] = ZLayer.succeed(z)
-    def uio: UIO[Z]       = ZIO.succeed(z)

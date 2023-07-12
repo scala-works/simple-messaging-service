@@ -1,12 +1,11 @@
 import zio.*
 import works.scala.sms.api.controllers.*
-import caliban.parsing.adt.OperationType.Subscription
 import zio.http.*
-import sttp.tapir.server.ziohttp.ZioHttpInterpreter
 import works.scala.sms.api.services.*
-import works.scala.sms.config.{ConfigLoader, RMQConfig, ServerConfig}
+import works.scala.sms.config.{ RMQConfig, ServerConfig}
 import works.scala.sms.rmq.RMQ
 import works.scala.sms.extensions.Extensions.*
+import opinions.*
 
 object Main extends ZIOAppDefault:
 
@@ -38,7 +37,7 @@ object Main extends ZIOAppDefault:
   override def run: ZIO[Any & (ZIOAppArgs & Scope), Any, Any] =
     program
       .provide(
-        ConfigLoader.layer[ServerConfig]("works.scala.sms.server"),
+        ConfigLayer[ServerConfig]("works.scala.sms.server"),
         ZLayer
           .service[ServerConfig]
           .flatMap(env => Server.Config.default.port(env.get.port).ulayer),
@@ -54,7 +53,7 @@ object Main extends ZIOAppDefault:
         ZLayer.scoped {
           RMQ.connection
         },
-        ConfigLoader.layer[RMQConfig]("works.scala.sms.rmq"),
+        ConfigLayer[RMQConfig]("works.scala.sms.rmq"),
         InitServiceImpl.layer,
         DelayServiceImpl.layer,
         ConsumerServiceImpl.layer,
