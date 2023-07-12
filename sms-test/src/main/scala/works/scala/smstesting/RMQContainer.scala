@@ -1,16 +1,19 @@
-package works.scala.sms.testing
+package works.scala.smstesting
 
 import com.dimafeng.testcontainers.RabbitMQContainer
 import zio.{Scope, ZIO, ZLayer}
 import opinions.*
+import org.testcontainers.utility.DockerImageName
 import works.scala.sms.config.RMQConfig
 
-object RMQContainer {
+object RMQContainer:
 
   private def ar: ZIO[Scope, Throwable, RabbitMQContainer] =
     ZIO.acquireRelease {
       ZIO.attempt {
-        val container = new RabbitMQContainer()
+        val container = new RabbitMQContainer(
+          dockerImageName = DockerImageName.parse("rabbitmq:3.12-management")
+        )
         container.start()
         container
       }
@@ -35,5 +38,3 @@ object RMQContainer {
         )
       )
       .zlayer
-
-}
