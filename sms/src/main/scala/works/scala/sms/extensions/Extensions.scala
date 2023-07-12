@@ -5,7 +5,7 @@ import com.rabbitmq.http.client.Client
 import works.scala.sms.api.models.{DelayedMessage, PublishMessageRequest}
 import works.scala.sms.rmq.RMQ
 import zio.json.JsonCodec
-import zio.{Scope, Tag, UIO, ULayer, ZIO, ZLayer}
+import zio.{Scope, Tag, Task, UIO, ULayer, ZIO, ZLayer}
 import zio.json.EncoderOps
 
 import scala.jdk.CollectionConverters.*
@@ -14,7 +14,13 @@ import java.time.Instant
 object Extensions:
 
   extension (rmqClient: Client)
-    def createVhostZIO(vhost: String) =
+
+    def task[A](e: Client => A): Task[Option[A]] = ZIO.attemptBlocking {
+      Option(
+        e(rmqClient)
+      )
+    }
+    def createVhostZIO(vhost: String)            =
       for {
         _   <- ZIO.logInfo(s"Initializing VirtualHost ${vhost}...")
         vhO <- ZIO.attemptBlocking {
